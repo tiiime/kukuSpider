@@ -69,6 +69,9 @@ DOWNLOADER_MIDDLEWARES = {
 #    'ComicsSpider.pipelines.ComicsspiderPipeline': 300,
 #}
 
+ITEM_PIPELINES = {'ComicsSpider.pipelines.ComicsSpiderPipeline': 1}
+IMAGES_STORE = r'C:\Users\SEELE\PycharmProjects\ComicsSpider'
+
 # Enable and configure the AutoThrottle extension (disabled by default)
 # See http://doc.scrapy.org/en/latest/topics/autothrottle.html
 AUTOTHROTTLE_ENABLED = True
