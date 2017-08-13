@@ -6,6 +6,8 @@ from scrapy.selector import HtmlXPathSelector
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
 
+from ComicsSpider.items import ComicsSpiderItem
+
 
 class CategorySpider(scrapy.Spider):
     name = "category"
@@ -34,12 +36,14 @@ class CategorySpider(scrapy.Spider):
 
         try:
             ele = self.driver.find_element_by_css_selector(
-                'body > table:nth-child(2) > tbody > tr > td > a:nth-child(11)')
+                'body > table:nth-child(2) > tbody > tr > td > a:nth-child(15)')
         except NoSuchElementException:
-            ele = self.driver.find_element_by_css_selector('body > table:nth-child(2) > tbody > tr > td > a')
+            ele = self.driver.find_element_by_css_selector(
+                'body > table:nth-child(2) > tbody > tr > td > a:nth-child(15)')
 
         path = ele.get_attribute('href')
-        href = self.home + path
+        # href = self.home + path
+        href = path
 
         image = self.driver.find_element_by_css_selector(
             "body > table:nth-child(2) > tbody > tr > td > img").get_attribute('src')
@@ -47,13 +51,15 @@ class CategorySpider(scrapy.Spider):
         print("path -->" + path)
         print("image -->" + image)
 
-        Request(urljoin(response.url, image), callback=self.download_image)
-
-        if not path == "/exit/exit.htm":
+        if path.find(r"/exit/exit.htm") == -1:
             print("href ->" + href)
-            Request(urljoin(response.url, href), callback=self.chapter_parser)
+            yield Request(href, callback=self.chapter_parser)
             pass
         pass
+
+        c = ComicsSpiderItem()
+        c['image_urls'] = [image]
+        yield c
 
     def download_image(self, response):
         print("download " + response.url)
