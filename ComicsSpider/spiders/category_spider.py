@@ -1,16 +1,17 @@
+import re
+
 import scrapy
 from urllib.parse import urljoin
 from scrapy.http import Request
-import time
-from scrapy.selector import HtmlXPathSelector
 from selenium import webdriver
 from selenium.common.exceptions import NoSuchElementException
+from urllib.parse import unquote
 
 from ComicsSpider.items import ComicsSpiderItem
 
-
 class CategorySpider(scrapy.Spider):
     name = "category"
+    num = re.compile(r"[+-]?\d+(?:\.\d+)?")
     allowed_domains = ["comic.kukudm.com"]
     home = "http://comic.kukudm.com"
     start_urls = [
@@ -18,21 +19,30 @@ class CategorySpider(scrapy.Spider):
     ]
 
     def __init__(self):
-        chrome = r"C:\Users\SEELE\PycharmProjects\ComicsSpider\ComicsSpider\misc\chromedriver.exe"
+        chrome = r"/Users/kang/play/ComicsSpider/ComicsSpider/misc/chromedriver"
         self.driver = webdriver.Chrome(executable_path=chrome)
 
     def parse(self, response):
-        for it in response.css('#comiclistn > dd'):
+        for index, it in enumerate(response.css('#comiclistn > dd')):
             print("\n----------- chapter -----------\n")
             print(self.home + it.xpath('a/@href').extract_first())
             yield Request(
                 urljoin(response.url, self.home + it.xpath('a/@href').extract_first()),
-                callback=self.chapter_parser)
-            pass
-        pass
+                callback=self.chapter_parser,
+                priority=100 - index)
 
     def chapter_parser(self, response):
+        index = response.url.split('/')[-1].split('.')[0]
         self.driver.get(response.url)
+
+        print(unquote(response.url))
+
+        try:
+            title = self.driver.title
+            print("title->" + title)
+            titleIndex = 100 - int(self.num.search(title).group(0))
+        except AttributeError:
+            titleIndex = 0
 
         try:
             ele = self.driver.find_element_by_css_selector(
@@ -48,23 +58,12 @@ class CategorySpider(scrapy.Spider):
         image = self.driver.find_element_by_css_selector(
             "body > table:nth-child(2) > tbody > tr > td > img").get_attribute('src')
 
-        print("path -->" + path)
-        print("image -->" + image)
-
         if path.find(r"/exit/exit.htm") == -1:
-            print("href ->" + href)
-            yield Request(href, callback=self.chapter_parser)
+            yield Request(href, callback=self.chapter_parser, priority=titleIndex)
             pass
         pass
 
         c = ComicsSpiderItem()
-        c['image_urls'] = [image]
+        c['image_url'] = image
+        c['name'] = index.zfill(2) + ".jpg"
         yield c
-
-    def download_image(self, response):
-        print("download " + response.url)
-        split = response.url.split("/")
-        filename = split[-2] + "/" + split[-1]
-        with open(filename, 'wb') as f:
-            print("file->" + f)
-            f.write(response.body)

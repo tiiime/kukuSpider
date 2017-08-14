@@ -8,13 +8,18 @@ from scrapy import Request
 from scrapy.pipelines.images import ImagesPipeline
 from urllib.parse import unquote
 
+
 class ComicsSpiderPipeline(ImagesPipeline):
     def file_path(self, request, response=None, info=None):
-        # item=request.meta['item'] # Like this you can use all from item, not just url.
-        split = request.url.split('/')
-        return 'full/%s/%s' % (unquote(split[-2]), split[-1])
+        item = request.meta['item_name']
+        url = request.url
+        url_split = url.split('/')
+        name = 'full/%s/%s' % (unquote(url_split[-2]), str(item))
+        return name
+
 
     def get_media_requests(self, item, info):
         # yield Request(item['images']) # Adding meta. Dunno how to put it in one line :-)
-        for image in item['image_urls']:
-            yield Request(image)
+        r = Request(item['image_url'], priority=100)
+        r.meta['item_name'] = item["name"]
+        return r
